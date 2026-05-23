@@ -5,6 +5,7 @@ import {
   getAuthTokens,
   saveAuthTokens,
 } from "@/services/authTokenStore";
+import { getCurrentLanguage } from "@/stores/preferenceStore";
 import type { AuthResponse, AuthTokens } from "@/types/auth";
 
 type ApiRequestOptions = Omit<RequestInit, "body"> & {
@@ -28,6 +29,9 @@ async function sendRequest<T>(
 ): Promise<T> {
   const headers = new Headers(options.headers);
   const tokens = options.auth === false ? null : await getAuthTokens();
+
+  headers.set("Accept", "application/json");
+  headers.set("Accept-Language", getCurrentLanguage());
 
   if (tokens?.accessToken) {
     headers.set("Authorization", `Bearer ${tokens.accessToken}`);

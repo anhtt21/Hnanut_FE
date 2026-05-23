@@ -1,13 +1,15 @@
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack } from "expo-router";
 
-import FullScreenLoader from '@/components/full-screen-loader';
-import { useAuth } from '@/stores/authStore';
+import FullScreenLoader from "@/components/full-screen-loader";
+import { useAuth } from "@/stores/authStore";
+import { usePreferences } from "@/stores/preferenceStore";
 
 export default function ProtectedAppLayout() {
   const { isLoading, isAuthenticated } = useAuth();
+  const { t } = usePreferences();
 
   if (isLoading) {
-    return <FullScreenLoader label="Đang khôi phục phiên đăng nhập..." />;
+    return <FullScreenLoader label={t("restoringSession")} />;
   }
 
   if (!isAuthenticated) {

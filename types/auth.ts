@@ -9,6 +9,10 @@ export type LoginRequest = {
   password: string;
 };
 
+export type ForgotPasswordRequest = {
+  email: string;
+};
+
 export type AuthResponse = {
   userId: string;
   email: string;
@@ -32,3 +36,7 @@ export type AuthUser = Pick<
   AuthResponse,
   "userId" | "email" | "fullName" | "role"
 >;
+
+export type ForgotPasswordResponse = {
+  message: string;
+};

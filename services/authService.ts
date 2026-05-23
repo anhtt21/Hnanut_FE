@@ -1,6 +1,12 @@
 import { apiClient } from "@/services/apiClient";
 import { clearAuthTokens, getAuthTokens } from "@/services/authTokenStore";
-import type { AuthResponse, LoginRequest, RegisterRequest } from "@/types/auth";
+import type {
+  AuthResponse,
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
+  LoginRequest,
+  RegisterRequest,
+} from "@/types/auth";
 
 export const authService = {
   register(request: RegisterRequest): Promise<AuthResponse> {
@@ -13,6 +19,16 @@ export const authService = {
 
   login(request: LoginRequest): Promise<AuthResponse> {
     return apiClient<AuthResponse>("/api/auth/login", {
+      method: "POST",
+      auth: false,
+      body: request,
+    });
+  },
+
+  forgotPassword(
+    request: ForgotPasswordRequest,
+  ): Promise<ForgotPasswordResponse> {
+    return apiClient<ForgotPasswordResponse>("/api/auth/forgot-password", {
       method: "POST",
       auth: false,
       body: request,

@@ -1,38 +1,60 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
+import AuthPreferenceBar from "@/components/auth-preference-bar";
+import { authPalettes, type AuthPalette } from "@/constants/appTheme";
 import { getApiErrorMessage } from "@/services/apiError";
 import { authService } from "@/services/authService";
 import { useAuth } from "@/stores/authStore";
+import { usePreferences } from "@/stores/preferenceStore";
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { setSession } = useAuth();
+  const { colorMode, language, t } = usePreferences();
+  const palette = authPalettes[colorMode];
+  const styles = useMemo(() => createStyles(palette), [palette]);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmVisible, setIsConfirmVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const confirmPasswordMismatch =
+    confirmPassword.length > 0 && password !== confirmPassword;
   const canSubmit =
     fullName.trim().length > 0 &&
     email.trim().length > 0 &&
     password.length > 0 &&
+    confirmPassword.length > 0 &&
+    !confirmPasswordMismatch &&
     !isSubmitting;
 
   async function handleSubmit() {
-    const validationError = validateRegister(fullName, email, password);
+    const validationError = validateRegister(
+      fullName,
+      email,
+      password,
+      confirmPassword,
+      t,
+    );
 
     if (validationError) {
       setError(validationError);
@@ -52,77 +74,181 @@ export default function RegisterScreen() {
       await setSession(response);
       router.replace("/");
     } catch (submitError) {
-      setError(getApiErrorMessage(submitError));
+      setError(getApiErrorMessage(submitError, language));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <View style={styles.card}>
-        <Text style={styles.title}>Đăng ký</Text>
-        <Text style={styles.subtitle}>Tạo tài khoản HnaNut mới.</Text>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Họ tên</Text>
-          <TextInput
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Demo User"
-            style={styles.input}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            placeholder="demo@gmail.com"
-            style={styles.input}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Mật khẩu</Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="Tối thiểu 8 ký tự"
-            style={styles.input}
-          />
-          <Text style={styles.hint}>
-            Cần chữ hoa, chữ thường, số và ký tự đặc biệt.
-          </Text>
-        </View>
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <Pressable
-          style={[styles.button, !canSubmit && styles.buttonDisabled]}
-          disabled={!canSubmit}
-          onPress={handleSubmit}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {isSubmitting ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>Đăng ký</Text>
-          )}
-        </Pressable>
+          <AuthPreferenceBar />
 
-        <Link href="/login" style={styles.link}>
-          Đã có tài khoản? Đăng nhập
-        </Link>
-      </View>
-    </KeyboardAvoidingView>
+          <View style={styles.card}>
+            <View style={styles.headerBand}>
+              <View style={styles.brandRow}>
+                <View style={styles.brandMark}>
+                  <Ionicons name="nutrition" size={18} color="#FFFFFF" />
+                </View>
+                <Text style={styles.brandText}>Hnanut</Text>
+              </View>
+            </View>
+
+            <View style={styles.content}>
+              <Text style={styles.title}>{t("registerTitle")}</Text>
+              <Text style={styles.subtitle}>{t("registerSubtitle")}</Text>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>{t("fullName")}</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons
+                    name="person-outline"
+                    size={18}
+                    color={palette.icon}
+                  />
+                  <TextInput
+                    value={fullName}
+                    onChangeText={setFullName}
+                    placeholder={t("fullNamePlaceholder")}
+                    placeholderTextColor={palette.placeholder}
+                    style={styles.input}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>{t("email")}</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="mail-outline" size={18} color={palette.icon} />
+                  <TextInput
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    placeholder={t("emailPlaceholder")}
+                    placeholderTextColor={palette.placeholder}
+                    style={styles.input}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>{t("password")}</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={18}
+                    color={palette.icon}
+                  />
+                  <TextInput
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!isPasswordVisible}
+                    placeholder={t("passwordCreatePlaceholder")}
+                    placeholderTextColor={palette.placeholder}
+                    style={styles.input}
+                  />
+                  <Pressable
+                    accessibilityLabel={
+                      isPasswordVisible ? t("hidePassword") : t("showPassword")
+                    }
+                    accessibilityRole="button"
+                    hitSlop={10}
+                    onPress={() => setIsPasswordVisible((value) => !value)}
+                  >
+                    <Ionicons
+                      name={
+                        isPasswordVisible ? "eye-off-outline" : "eye-outline"
+                      }
+                      size={18}
+                      color={palette.icon}
+                    />
+                  </Pressable>
+                </View>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>{t("confirmPassword")}</Text>
+                <View
+                  style={[
+                    styles.inputWrap,
+                    confirmPasswordMismatch && styles.inputWrapError,
+                  ]}
+                >
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={18}
+                    color={palette.icon}
+                  />
+                  <TextInput
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!isConfirmVisible}
+                    placeholder={t("confirmPasswordPlaceholder")}
+                    placeholderTextColor={palette.placeholder}
+                    style={styles.input}
+                  />
+                  <Pressable
+                    accessibilityLabel={
+                      isConfirmVisible ? t("hidePassword") : t("showPassword")
+                    }
+                    accessibilityRole="button"
+                    hitSlop={10}
+                    onPress={() => setIsConfirmVisible((value) => !value)}
+                  >
+                    <Ionicons
+                      name={isConfirmVisible ? "eye-off-outline" : "eye-outline"}
+                      size={18}
+                      color={palette.icon}
+                    />
+                  </Pressable>
+                </View>
+                {confirmPasswordMismatch ? (
+                  <Text style={styles.fieldError}>{t("confirmMismatch")}</Text>
+                ) : (
+                  <Text style={styles.hint}>{t("passwordHint")}</Text>
+                )}
+              </View>
+
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+
+              <Pressable
+                style={[
+                  styles.primaryButton,
+                  !canSubmit && styles.buttonDisabled,
+                ]}
+                disabled={!canSubmit}
+                onPress={handleSubmit}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>
+                    {t("registerButton")}
+                  </Text>
+                )}
+              </Pressable>
+
+              <Link href="/login" style={styles.footerLink}>
+                {t("registerLoginCta")}
+              </Link>
+            </View>
+          </View>
+
+          <Text style={styles.policyText}>{t("policy")}</Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -130,13 +256,15 @@ function validateRegister(
   fullName: string,
   email: string,
   password: string,
+  confirmPassword: string,
+  t: ReturnType<typeof usePreferences>["t"],
 ): string | null {
   if (!fullName.trim()) {
-    return "Họ tên là bắt buộc.";
+    return t("fullNameRequired");
   }
 
   if (!isValidGmail(email)) {
-    return "Email phải là địa chỉ Gmail, ví dụ demo@gmail.com.";
+    return t("gmailError");
   }
 
   if (
@@ -146,7 +274,11 @@ function validateRegister(
     !/\d/.test(password) ||
     !/[^A-Za-z0-9\s]/.test(password)
   ) {
-    return "Mật khẩu cần ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.";
+    return t("passwordStrongError");
+  }
+
+  if (password !== confirmPassword) {
+    return t("confirmMismatch");
   }
 
   return null;
@@ -156,69 +288,154 @@ function isValidGmail(value: string): boolean {
   return /^[^\s@]+@gmail\.com$/i.test(value.trim());
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 24,
-    backgroundColor: "#FFFFFF",
-  },
-  card: {
-    gap: 16,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#475569",
-  },
-  field: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#334155",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: "#0F172A",
-  },
-  hint: {
-    fontSize: 13,
-    color: "#64748B",
-  },
-  error: {
-    color: "#DC2626",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  button: {
-    alignItems: "center",
-    borderRadius: 8,
-    backgroundColor: "#0A7EA4",
-    paddingVertical: 14,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  link: {
-    textAlign: "center",
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#0A7EA4",
-  },
-});
+function createStyles(palette: AuthPalette) {
+  return StyleSheet.create({
+    safeArea: {
+      backgroundColor: palette.screenBg,
+      flex: 1,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: "center",
+      paddingHorizontal: 22,
+      paddingVertical: 24,
+    },
+    card: {
+      alignSelf: "center",
+      backgroundColor: palette.cardBg,
+      borderRadius: 28,
+      elevation: 5,
+      maxWidth: 420,
+      overflow: "hidden",
+      shadowColor: "#0F172A",
+      shadowOffset: { width: 0, height: 18 },
+      shadowOpacity: 0.08,
+      shadowRadius: 28,
+      width: "100%",
+    },
+    headerBand: {
+      backgroundColor: palette.headerBand,
+      paddingBottom: 22,
+      paddingHorizontal: 20,
+      paddingTop: 18,
+    },
+    brandRow: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 8,
+    },
+    brandMark: {
+      alignItems: "center",
+      backgroundColor: palette.primaryDark,
+      borderRadius: 16,
+      height: 30,
+      justifyContent: "center",
+      width: 30,
+    },
+    brandText: {
+      color: palette.primaryDark,
+      fontSize: 15,
+      fontWeight: "900",
+    },
+    content: {
+      gap: 14,
+      paddingBottom: 24,
+      paddingHorizontal: 20,
+      paddingTop: 24,
+    },
+    title: {
+      color: palette.text,
+      fontSize: 24,
+      fontWeight: "900",
+      textAlign: "center",
+    },
+    subtitle: {
+      color: palette.muted,
+      fontSize: 13,
+      lineHeight: 19,
+      marginBottom: 4,
+      textAlign: "center",
+    },
+    field: {
+      gap: 8,
+    },
+    label: {
+      color: palette.label,
+      fontSize: 12,
+      fontWeight: "800",
+    },
+    inputWrap: {
+      alignItems: "center",
+      backgroundColor: palette.inputBg,
+      borderRadius: 14,
+      flexDirection: "row",
+      gap: 10,
+      minHeight: 52,
+      paddingHorizontal: 14,
+    },
+    inputWrapError: {
+      borderColor: palette.errorText,
+      borderWidth: 1,
+    },
+    input: {
+      color: palette.inputText,
+      flex: 1,
+      fontSize: 14,
+      minHeight: 52,
+    },
+    hint: {
+      color: palette.policy,
+      fontSize: 11,
+      lineHeight: 16,
+    },
+    fieldError: {
+      color: palette.errorText,
+      fontSize: 11,
+      fontWeight: "700",
+      lineHeight: 16,
+    },
+    error: {
+      backgroundColor: palette.errorBg,
+      borderRadius: 12,
+      color: palette.errorText,
+      fontSize: 12,
+      fontWeight: "700",
+      lineHeight: 18,
+      padding: 12,
+    },
+    primaryButton: {
+      alignItems: "center",
+      backgroundColor: palette.primary,
+      borderRadius: 999,
+      justifyContent: "center",
+      marginTop: 4,
+      minHeight: 52,
+    },
+    buttonDisabled: {
+      opacity: 0.55,
+    },
+    primaryButtonText: {
+      color: "#FFFFFF",
+      fontSize: 15,
+      fontWeight: "900",
+    },
+    footerLink: {
+      color: palette.primaryDark,
+      fontSize: 12,
+      fontWeight: "900",
+      textAlign: "center",
+    },
+    policyText: {
+      alignSelf: "center",
+      color: palette.policy,
+      fontSize: 11,
+      lineHeight: 17,
+      marginTop: 18,
+      maxWidth: 340,
+      textAlign: "center",
+    },
+  });
+}
