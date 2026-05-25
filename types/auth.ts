@@ -22,6 +22,7 @@ export type AuthResponse = {
   accessTokenExpiresAtUtc: string;
   refreshToken: string;
   refreshTokenExpiresAtUtc: string;
+  avatarUrl?: string | null;
 };
 
 export type AuthTokens = Pick<
@@ -34,7 +35,7 @@ export type AuthTokens = Pick<
 
 export type AuthUser = Pick<
   AuthResponse,
-  "userId" | "email" | "fullName" | "role"
+  "userId" | "email" | "fullName" | "role" | "avatarUrl"
 >;
 
 export type ForgotPasswordResponse = {

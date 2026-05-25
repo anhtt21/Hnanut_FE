@@ -129,6 +129,17 @@ const dictionaries = {
     displayName: "Tên hiển thị",
     comingSoon: "Sẽ hoàn thiện ở task backend tiếp theo.",
     back: "Quay lại",
+
+    updateAccount: "Lưu tài khoản",
+    changePassword: "Đổi mật khẩu",
+    currentPassword: "Mật khẩu hiện tại",
+    newPassword: "Mật khẩu mới",
+    avatar: "Ảnh đại diện",
+    pickAvatar: "Chọn ảnh",
+    accountSaved: "Đã cập nhật tài khoản",
+    passwordChanged: "Đã đổi mật khẩu",
+    passwordMismatch: "Mật khẩu xác nhận không khớp.",
+    avatarUpdated: "Đã cập nhật ảnh đại diện",
   },
   en: {
     loadingDefault: "Loading...",
@@ -227,6 +238,17 @@ const dictionaries = {
     displayName: "Display name",
     comingSoon: "Will be completed in a later backend task.",
     back: "Back",
+
+    updateAccount: "Save account",
+    changePassword: "Change password",
+    currentPassword: "Current password",
+    newPassword: "New password",
+    avatar: "Avatar",
+    pickAvatar: "Choose image",
+    accountSaved: "Account updated",
+    passwordChanged: "Password changed",
+    passwordMismatch: "Confirm password does not match.",
+    avatarUpdated: "Avatar updated",
   },
 } as const;
 

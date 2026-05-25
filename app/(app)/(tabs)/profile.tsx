@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +19,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { authPalettes, type AuthPalette } from "@/constants/appTheme";
+import { toApiAssetUrl } from "@/services/accountService";
 import { ApiError, getApiErrorMessage } from "@/services/apiError";
 import { profileService } from "@/services/profileService";
 import { useAuth } from "@/stores/authStore";
@@ -42,6 +44,8 @@ export default function ProfileScreen() {
     () => getInitials(user?.fullName || "Hnanut"),
     [user?.fullName],
   );
+
+  const avatarUri = toApiAssetUrl(user?.avatarUrl);
 
   const activityLabel = profile
     ? getActivityLabel(profile.activityLevel, t)
@@ -96,9 +100,17 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+          {avatarUri ? (
+            <Image
+              source={{ uri: avatarUri }}
+              style={styles.avatarImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+          )}
 
           <Text style={styles.userName}>{user?.fullName || "Hnanut"}</Text>
           <Text style={styles.userEmail}>{user?.email || "Account"}</Text>
@@ -378,6 +390,13 @@ function createStyles(palette: AuthPalette) {
       color: palette.primaryDark,
       fontSize: 26,
       fontWeight: "900",
+    },
+    avatarImage: {
+      borderColor: palette.primaryDark,
+      borderRadius: 44,
+      borderWidth: 3,
+      height: 88,
+      width: 88,
     },
     userName: {
       color: palette.text,
