@@ -19,6 +19,9 @@ export default function ProtectedAppLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="settings/account" />
+      <Stack.Screen name="settings/goal" />
+      <Stack.Screen name="settings/general" />
     </Stack>
   );
 }
