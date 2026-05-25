@@ -14,6 +14,7 @@ export type FoodSearchItem = {
   category: string;
   defaultServingGram: number;
   isVerified: boolean;
+  imageUrl?: string | null;
   nutritionPer100g: FoodNutrition;
 };
 
@@ -28,6 +29,7 @@ export type FoodDetail = {
   category: string;
   defaultServingGram: number;
   isVerified: boolean;
+  imageUrl?: string | null;
   aliases: string[];
   nutritionPer100g: FoodNutrition;
 };
