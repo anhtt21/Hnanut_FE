@@ -141,6 +141,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       await authService.logout();
     } finally {
+      await clearAuthTokens();
       await clearAuthUser();
       setTokens(null);
       setUser(null);

@@ -27,6 +27,7 @@ import { ApiError, getApiErrorMessage } from "@/services/apiError";
 import { profileService } from "@/services/profileService";
 import { useAuth } from "@/stores/authStore";
 import { usePreferences } from "@/stores/preferenceStore";
+import { useProfileStore } from "@/stores/profileStore";
 import type {
   ActivityLevel,
   Gender,
@@ -34,6 +35,7 @@ import type {
   UpsertUserProfileRequest,
   UserProfileResponse,
 } from "@/types/profile";
+import { webInputStyle } from "@/utils/webInputStyle";
 
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
 type Option<T extends string> = { value: T; label: string };
@@ -42,6 +44,7 @@ export default function GoalSettingsScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { colorMode, language, t } = usePreferences();
+  const { setProfile, clearProfile } = useProfileStore();
 
   const palette = authPalettes[colorMode];
   const styles = useMemo(() => createStyles(palette), [palette]);
@@ -116,8 +119,10 @@ export default function GoalSettingsScreen() {
     try {
       const profile = await profileService.getProfile();
       fillForm(profile);
+      setProfile(profile);
     } catch (loadError) {
       if (loadError instanceof ApiError && loadError.status === 404) {
+        clearProfile();
         setError(t("profileNotFound"));
         return;
       }
@@ -126,7 +131,7 @@ export default function GoalSettingsScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [fillForm, language, t]);
+  }, [clearProfile, fillForm, language, setProfile, t]);
 
   useEffect(() => {
     void loadProfile();
@@ -148,6 +153,7 @@ export default function GoalSettingsScreen() {
     try {
       const saved = await profileService.saveProfile(request);
       fillForm(saved);
+      setProfile(saved);
       setSuccess(t("profileSaved"));
     } catch (saveError) {
       setError(getApiErrorMessage(saveError, language));
@@ -197,6 +203,7 @@ export default function GoalSettingsScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
+          style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -343,27 +350,32 @@ export default function GoalSettingsScreen() {
               onChange={setActivityLevel}
               styles={styles}
             />
-
-            <Pressable
-              style={[styles.saveButton, isSaving && styles.disabledButton]}
-              disabled={isSaving}
-              onPress={handleSave}
-            >
-              {isSaving ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <>
-                  <Ionicons
-                    name="checkmark-circle-outline"
-                    size={18}
-                    color="#FFFFFF"
-                  />
-                  <Text style={styles.saveButtonText}>{t("saveProfile")}</Text>
-                </>
-              )}
-            </Pressable>
           </View>
         </ScrollView>
+
+        <View style={styles.footer}>
+          <Pressable
+            style={[
+              styles.saveButton,
+              (isSaving || isLoading) && styles.disabledButton,
+            ]}
+            disabled={isSaving || isLoading}
+            onPress={handleSave}
+          >
+            {isSaving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={18}
+                  color="#FFFFFF"
+                />
+                <Text style={styles.saveButtonText}>{t("saveProfile")}</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -417,7 +429,7 @@ function ProfileField({
         keyboardType={keyboardType}
         placeholder="0"
         placeholderTextColor={styles.placeholderColor.color}
-        style={styles.input}
+        style={[styles.input, webInputStyle]}
       />
     </View>
   );
@@ -484,10 +496,13 @@ function createStyles(palette: AuthPalette) {
     keyboardView: {
       flex: 1,
     },
+    scrollView: {
+      flex: 1,
+    },
     scrollContent: {
       gap: 16,
       padding: 18,
-      paddingBottom: 32,
+      paddingBottom: 112,
     },
     headerRow: {
       alignItems: "center",
@@ -717,6 +732,14 @@ function createStyles(palette: AuthPalette) {
       gap: 8,
       justifyContent: "center",
       minHeight: 52,
+    },
+    footer: {
+      backgroundColor: palette.screenBg,
+      borderTopColor: palette.border,
+      borderTopWidth: 1,
+      paddingBottom: Platform.OS === "web" ? 18 : 22,
+      paddingHorizontal: 18,
+      paddingTop: 10,
     },
     saveButtonText: {
       color: "#FFFFFF",

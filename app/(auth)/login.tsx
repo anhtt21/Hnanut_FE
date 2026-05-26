@@ -20,6 +20,7 @@ import { getApiErrorMessage } from "@/services/apiError";
 import { authService } from "@/services/authService";
 import { useAuth } from "@/stores/authStore";
 import { usePreferences } from "@/stores/preferenceStore";
+import { webInputStyle } from "@/utils/webInputStyle";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -145,7 +146,7 @@ export default function LoginScreen() {
                   keyboardType="email-address"
                   placeholder={t("emailPlaceholder")}
                   placeholderTextColor={palette.placeholder}
-                  style={styles.input}
+                  style={[styles.input, webInputStyle]}
                 />
               </View>
             </View>
@@ -172,7 +173,7 @@ export default function LoginScreen() {
                   secureTextEntry={!isPasswordVisible}
                   placeholder={t("passwordPlaceholder")}
                   placeholderTextColor={palette.placeholder}
-                  style={styles.input}
+                  style={[styles.input, webInputStyle]}
                 />
                 <Pressable
                   accessibilityLabel={
@@ -205,7 +206,7 @@ export default function LoginScreen() {
                     keyboardType="email-address"
                     placeholder={t("forgotEmailPlaceholder")}
                     placeholderTextColor={palette.placeholder}
-                    style={styles.input}
+                    style={[styles.input, webInputStyle]}
                   />
                 </View>
                 {forgotError ? (

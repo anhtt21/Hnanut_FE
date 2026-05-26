@@ -29,6 +29,7 @@ import { getApiErrorMessage } from "@/services/apiError";
 import { useAuth } from "@/stores/authStore";
 import { usePreferences } from "@/stores/preferenceStore";
 import type { AccountResponse } from "@/types/account";
+import { webInputStyle } from "@/utils/webInputStyle";
 
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -112,6 +113,7 @@ export default function AccountSettingsScreen() {
       });
 
       setAccount(response);
+      setFullName(response.fullName);
       updateUser({
         userId: response.userId,
         email: response.email,
@@ -214,6 +216,7 @@ export default function AccountSettingsScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
+          style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -293,23 +296,6 @@ export default function AccountSettingsScreen() {
               styles={styles}
               palette={palette}
             />
-
-            <Pressable
-              style={[
-                styles.primaryButton,
-                isSavingAccount && styles.disabledButton,
-              ]}
-              disabled={isSavingAccount}
-              onPress={handleUpdateAccount}
-            >
-              {isSavingAccount ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.primaryButtonText}>
-                  {t("updateAccount")}
-                </Text>
-              )}
-            </Pressable>
           </View>
 
           <View style={styles.card}>
@@ -389,6 +375,23 @@ export default function AccountSettingsScreen() {
             ) : null}
           </View>
         </ScrollView>
+
+        <View style={styles.footer}>
+          <Pressable
+            style={[
+              styles.primaryButton,
+              (isSavingAccount || isLoading) && styles.disabledButton,
+            ]}
+            disabled={isSavingAccount || isLoading}
+            onPress={handleUpdateAccount}
+          >
+            {isSavingAccount ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.primaryButtonText}>{t("updateAccount")}</Text>
+            )}
+          </Pressable>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -424,7 +427,7 @@ function Field({
           placeholder={placeholder}
           placeholderTextColor={palette.placeholder}
           secureTextEntry={secureTextEntry}
-          style={styles.input}
+          style={[styles.input, webInputStyle]}
         />
       </View>
     </View>
@@ -504,7 +507,8 @@ function createStyles(palette: AuthPalette) {
   return StyleSheet.create({
     safeArea: { backgroundColor: palette.screenBg, flex: 1 },
     keyboardView: { flex: 1 },
-    scrollContent: { gap: 16, padding: 18, paddingBottom: 32 },
+    scrollView: { flex: 1 },
+    scrollContent: { gap: 16, padding: 18, paddingBottom: 112 },
     headerRow: { alignItems: "center", flexDirection: "row", gap: 12 },
     headerIcon: {
       alignItems: "center",
@@ -626,6 +630,14 @@ function createStyles(palette: AuthPalette) {
       borderRadius: 999,
       justifyContent: "center",
       minHeight: 52,
+    },
+    footer: {
+      backgroundColor: palette.screenBg,
+      borderTopColor: palette.border,
+      borderTopWidth: 1,
+      paddingBottom: Platform.OS === "web" ? 18 : 22,
+      paddingHorizontal: 18,
+      paddingTop: 10,
     },
     primaryButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "900" },
     disabledButton: { opacity: 0.6 },

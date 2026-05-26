@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,22 +14,22 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import FoodImagePreview from "@/components/food-image-preview";
 import { authPalettes, type AuthPalette } from "@/constants/appTheme";
 import { getApiErrorMessage } from "@/services/apiError";
 import { foodService } from "@/services/foodService";
 import { usePreferences, type Language } from "@/stores/preferenceStore";
 import type { FoodSearchItem } from "@/types/food";
 import { getFoodImageUri } from "@/utils/foodImages";
+import { useMealDraft } from "@/stores/mealDraftStore";
+import type { MealDraftItem } from "@/types/meal";
+import { webInputStyle } from "@/utils/webInputStyle";
 
 const SEARCH_DELAY_MS = 400;
 const MIN_QUERY_LENGTH = 2;
 
-type CartItem = {
-  food: FoodSearchItem;
-  quantity: number;
-};
-
 export default function ExploreScreen() {
+  const router = useRouter();
   const { colorMode, language, t } = usePreferences();
   const palette = authPalettes[colorMode];
   const styles = useMemo(() => createStyles(palette), [palette]);
@@ -39,10 +39,17 @@ export default function ExploreScreen() {
   const [foods, setFoods] = useState<FoodSearchItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [chipOffset, setChipOffset] = useState(0);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [previewFood, setPreviewFood] = useState<FoodSearchItem | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const {
+    draft,
+    addFood,
+    decrementFood,
+    removeFood,
+    getFoodQuantity,
+  } = useMealDraft();
 
   const trimmedQuery = query.trim();
   const canSearch = trimmedQuery.length >= MIN_QUERY_LENGTH;
@@ -97,70 +104,14 @@ export default function ExploreScreen() {
     return foods.filter((food) => food.category === selectedCategory);
   }, [foods, selectedCategory]);
 
-  const cartItemCount = useMemo(
-    () => cartItems.reduce((total, item) => total + item.quantity, 0),
-    [cartItems],
-  );
-
-  const cartCalories = useMemo(
-    () =>
-      cartItems.reduce(
-        (total, item) => total + servingCalories(item.food) * item.quantity,
-        0,
-      ),
-    [cartItems],
-  );
-
-  const cartServingGram = useMemo(
-    () =>
-      cartItems.reduce(
-        (total, item) => total + item.food.defaultServingGram * item.quantity,
-        0,
-      ),
-    [cartItems],
-  );
-
-  function getQuantity(foodId: string) {
-    return cartItems.find((item) => item.food.id === foodId)?.quantity ?? 0;
-  }
-
-  function addFood(food: FoodSearchItem) {
-    setCartItems((current) => {
-      const existing = current.find((item) => item.food.id === food.id);
-
-      if (existing) {
-        return current.map((item) =>
-          item.food.id === food.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
-        );
-      }
-
-      return [...current, { food, quantity: 1 }];
-    });
-  }
-
-  function decrementFood(foodId: string) {
-    setCartItems((current) =>
-      current.flatMap((item) => {
-        if (item.food.id !== foodId) return [item];
-        if (item.quantity <= 1) return [];
-        return [{ ...item, quantity: item.quantity - 1 }];
-      }),
-    );
-  }
-
-  function removeFood(foodId: string) {
-    setCartItems((current) =>
-      current.filter((item) => item.food.id !== foodId),
-    );
-  }
+  const cartItems = draft.selectedFoods;
+  const cartItemCount = draft.totals.itemCount;
+  const cartCalories = draft.totals.calories;
+  const cartServingGram = draft.totals.totalGram;
 
   function scrollChips(direction: "left" | "right") {
     const nextOffset =
-      direction === "left"
-        ? Math.max(0, chipOffset - 180)
-        : chipOffset + 180;
+      direction === "left" ? Math.max(0, chipOffset - 180) : chipOffset + 180;
 
     setChipOffset(nextOffset);
     chipScrollRef.current?.scrollTo({ x: nextOffset, animated: true });
@@ -190,10 +141,7 @@ export default function ExploreScreen() {
             placeholderTextColor={palette.placeholder}
             autoCapitalize="none"
             autoCorrect={false}
-            style={[
-              styles.searchInput,
-              Platform.OS === "web" ? styles.searchInputWeb : null,
-            ]}
+            style={[styles.searchInput, webInputStyle]}
           />
           {query.length > 0 ? (
             <Pressable onPress={() => setQuery("")} style={styles.clearButton}>
@@ -216,7 +164,9 @@ export default function ExploreScreen() {
               <Ionicons
                 name="chevron-back"
                 size={18}
-                color={chipOffset <= 0 ? palette.placeholder : palette.primaryDark}
+                color={
+                  chipOffset <= 0 ? palette.placeholder : palette.primaryDark
+                }
               />
             </Pressable>
 
@@ -227,7 +177,9 @@ export default function ExploreScreen() {
               showsHorizontalScrollIndicator={false}
               style={styles.chipScroller}
               contentContainerStyle={styles.chipRow}
-              onScroll={(event) => setChipOffset(event.nativeEvent.contentOffset.x)}
+              onScroll={(event) =>
+                setChipOffset(event.nativeEvent.contentOffset.x)
+              }
               scrollEventThrottle={16}
             >
               {categories.map((category) => {
@@ -314,12 +266,13 @@ export default function ExploreScreen() {
             renderItem={({ item }) => (
               <FoodCard
                 food={item}
-                quantity={getQuantity(item.id)}
+                quantity={getFoodQuantity(item.id)}
                 language={language}
                 palette={palette}
                 styles={styles}
                 onAdd={() => addFood(item)}
                 onDecrement={() => decrementFood(item.id)}
+                onPreview={() => setPreviewFood(item)}
                 labels={{
                   caloriesPer100g: t("caloriesPer100g"),
                   defaultServing: t("defaultServing"),
@@ -370,6 +323,11 @@ export default function ExploreScreen() {
             onAdd={addFood}
             onDecrement={decrementFood}
             onRemove={removeFood}
+            onPreview={setPreviewFood}
+            onContinue={() => {
+              setIsCartOpen(false);
+              router.push("../meals/create");
+            }}
             labels={{
               mealDraft: t("mealDraft"),
               mealDraftHint: t("mealDraftHint"),
@@ -384,6 +342,13 @@ export default function ExploreScreen() {
           />
         </>
       ) : null}
+
+      {previewFood ? (
+        <FoodImagePreview
+          food={previewFood}
+          onClose={() => setPreviewFood(null)}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -396,6 +361,7 @@ type FoodCardProps = {
   styles: ReturnType<typeof createStyles>;
   onAdd: () => void;
   onDecrement: () => void;
+  onPreview: () => void;
   labels: {
     caloriesPer100g: string;
     defaultServing: string;
@@ -415,13 +381,20 @@ function FoodCard({
   styles,
   onAdd,
   onDecrement,
+  onPreview,
   labels,
 }: FoodCardProps) {
   const nutrition = food.nutritionPer100g;
 
   return (
     <View style={styles.card}>
-      <FoodPhoto food={food} palette={palette} styles={styles} size="card" />
+      <FoodPhoto
+        food={food}
+        palette={palette}
+        styles={styles}
+        size="card"
+        onPreview={onPreview}
+      />
 
       <View style={styles.cardBody}>
         <View style={styles.cardHeader}>
@@ -444,7 +417,11 @@ function FoodCard({
 
         <View style={styles.metaRow}>
           <View style={styles.servingPill}>
-            <Ionicons name="scale-outline" size={14} color={palette.primaryDark} />
+            <Ionicons
+              name="scale-outline"
+              size={14}
+              color={palette.primaryDark}
+            />
             <Text style={styles.servingText}>
               {labels.defaultServing} {food.defaultServingGram}g
             </Text>
@@ -452,7 +429,11 @@ function FoodCard({
 
           {food.isVerified ? (
             <View style={styles.verifiedPill}>
-              <Ionicons name="checkmark-circle" size={14} color={palette.primaryDark} />
+              <Ionicons
+                name="checkmark-circle"
+                size={14}
+                color={palette.primaryDark}
+              />
               <Text style={styles.verifiedText}>{labels.verifiedFood}</Text>
             </View>
           ) : null}
@@ -505,31 +486,48 @@ function FoodPhoto({
   palette,
   styles,
   size,
+  onPreview,
 }: {
   food: FoodSearchItem;
   palette: AuthPalette;
   styles: ReturnType<typeof createStyles>;
   size: "card" | "sheet";
+  onPreview: () => void;
 }) {
   const [failed, setFailed] = useState(false);
+  const lastTapRef = useRef(0);
   const uri = useMemo(() => getFoodImageUri(food), [food]);
-  const frameStyle = size === "card" ? styles.foodPhotoCard : styles.foodPhotoSheet;
+  const frameStyle =
+    size === "card" ? styles.foodPhotoCard : styles.foodPhotoSheet;
   const iconSize = size === "card" ? 23 : 20;
+
+  function handlePress() {
+    const now = Date.now();
+
+    if (now - lastTapRef.current < 320) {
+      onPreview();
+    }
+
+    lastTapRef.current = now;
+  }
 
   if (!uri || failed) {
     return (
-      <View style={[frameStyle, styles.foodImageFallback]}>
+      <Pressable
+        style={[frameStyle, styles.foodImageFallback]}
+        onPress={handlePress}
+      >
         <Ionicons
           name="restaurant-outline"
           size={iconSize}
           color={palette.primaryDark}
         />
-      </View>
+      </Pressable>
     );
   }
 
   return (
-    <View style={frameStyle}>
+    <Pressable style={frameStyle} onPress={handlePress}>
       <Image
         source={{ uri }}
         style={styles.foodImage}
@@ -537,7 +535,7 @@ function FoodPhoto({
         transition={160}
         onError={() => setFailed(true)}
       />
-    </View>
+    </Pressable>
   );
 }
 
@@ -617,8 +615,10 @@ function CartSheet({
   onAdd,
   onDecrement,
   onRemove,
+  onPreview,
+  onContinue,
 }: {
-  items: CartItem[];
+  items: MealDraftItem[];
   calories: number;
   grams: number;
   language: Language;
@@ -639,6 +639,8 @@ function CartSheet({
   onAdd: (food: FoodSearchItem) => void;
   onDecrement: (foodId: string) => void;
   onRemove: (foodId: string) => void;
+  onPreview: (food: FoodSearchItem) => void;
+  onContinue: () => void;
 }) {
   const count = items.reduce((total, item) => total + item.quantity, 0);
 
@@ -669,7 +671,9 @@ function CartSheet({
         </View>
         <View style={styles.summaryCard}>
           <Text style={styles.summaryLabel}>{labels.defaultServing}</Text>
-          <Text style={styles.summaryValue}>{formatCalories(grams, language)}g</Text>
+          <Text style={styles.summaryValue}>
+            {formatCalories(grams, language)}g
+          </Text>
         </View>
       </View>
 
@@ -685,6 +689,7 @@ function CartSheet({
               palette={palette}
               styles={styles}
               size="sheet"
+              onPreview={() => onPreview(item.food)}
             />
 
             <View style={styles.cartItemBody}>
@@ -692,7 +697,7 @@ function CartSheet({
                 {item.food.name}
               </Text>
               <Text style={styles.cartItemMeta}>
-                {formatCalories(servingCalories(item.food), language)}{" "}
+                {formatCalories(draftItemCalories(item), language)}{" "}
                 {labels.caloriesShort} x {item.quantity}
               </Text>
               <Pressable onPress={() => onRemove(item.food.id)}>
@@ -719,7 +724,7 @@ function CartSheet({
         ))}
       </ScrollView>
 
-      <Pressable style={styles.primarySheetButton} onPress={onClose}>
+      <Pressable style={styles.primarySheetButton} onPress={onContinue}>
         <Text style={styles.primarySheetButtonText}>{labels.continueMeal}</Text>
       </Pressable>
     </View>
@@ -754,8 +759,8 @@ function StateView({
   );
 }
 
-function servingCalories(food: FoodSearchItem) {
-  return (food.nutritionPer100g.calories * food.defaultServingGram) / 100;
+function draftItemCalories(item: MealDraftItem) {
+  return (item.food.nutritionPer100g.calories * item.gram) / 100;
 }
 
 function formatCalories(value: number, language: Language) {
@@ -818,10 +823,6 @@ function createStyles(palette: AuthPalette) {
       fontSize: 15,
       fontWeight: "800",
       paddingHorizontal: 10,
-    },
-    searchInputWeb: {
-      outlineColor: "transparent",
-      outlineWidth: 0,
     },
     clearButton: {
       alignItems: "center",

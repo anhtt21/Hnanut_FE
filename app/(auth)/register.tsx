@@ -20,6 +20,7 @@ import { getApiErrorMessage } from "@/services/apiError";
 import { authService } from "@/services/authService";
 import { useAuth } from "@/stores/authStore";
 import { usePreferences } from "@/stores/preferenceStore";
+import { webInputStyle } from "@/utils/webInputStyle";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -120,7 +121,7 @@ export default function RegisterScreen() {
                     onChangeText={setFullName}
                     placeholder={t("fullNamePlaceholder")}
                     placeholderTextColor={palette.placeholder}
-                    style={styles.input}
+                    style={[styles.input, webInputStyle]}
                   />
                 </View>
               </View>
@@ -137,7 +138,7 @@ export default function RegisterScreen() {
                     keyboardType="email-address"
                     placeholder={t("emailPlaceholder")}
                     placeholderTextColor={palette.placeholder}
-                    style={styles.input}
+                    style={[styles.input, webInputStyle]}
                   />
                 </View>
               </View>
@@ -156,7 +157,7 @@ export default function RegisterScreen() {
                     secureTextEntry={!isPasswordVisible}
                     placeholder={t("passwordCreatePlaceholder")}
                     placeholderTextColor={palette.placeholder}
-                    style={styles.input}
+                    style={[styles.input, webInputStyle]}
                   />
                   <Pressable
                     accessibilityLabel={
@@ -196,7 +197,7 @@ export default function RegisterScreen() {
                     secureTextEntry={!isConfirmVisible}
                     placeholder={t("confirmPasswordPlaceholder")}
                     placeholderTextColor={palette.placeholder}
-                    style={styles.input}
+                    style={[styles.input, webInputStyle]}
                   />
                   <Pressable
                     accessibilityLabel={

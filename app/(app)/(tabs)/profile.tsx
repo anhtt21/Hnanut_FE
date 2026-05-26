@@ -1,9 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import {
   type ComponentProps,
   useCallback,
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -24,6 +24,7 @@ import { ApiError, getApiErrorMessage } from "@/services/apiError";
 import { profileService } from "@/services/profileService";
 import { useAuth } from "@/stores/authStore";
 import { usePreferences } from "@/stores/preferenceStore";
+import { useProfileStore } from "@/stores/profileStore";
 import type { UserProfileResponse } from "@/types/profile";
 
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
@@ -32,11 +33,11 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { colorMode, language, t } = usePreferences();
+  const { profile, setProfile, clearProfile } = useProfileStore();
 
   const palette = authPalettes[colorMode];
   const styles = useMemo(() => createStyles(palette), [palette]);
 
-  const [profile, setProfile] = useState<UserProfileResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,7 +63,7 @@ export default function ProfileScreen() {
       setProfile(response);
     } catch (loadError) {
       if (loadError instanceof ApiError && loadError.status === 404) {
-        setProfile(null);
+        clearProfile();
         setError(t("profileNotFound"));
         return;
       }
@@ -71,11 +72,13 @@ export default function ProfileScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [language, t]);
+  }, [clearProfile, language, setProfile, t]);
 
-  useEffect(() => {
-    void loadProfile();
-  }, [loadProfile]);
+  useFocusEffect(
+    useCallback(() => {
+      void loadProfile();
+    }, [loadProfile]),
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -134,7 +137,7 @@ export default function ProfileScreen() {
           </View>
         ) : null}
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {error && !profile ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <View style={styles.metricsGrid}>
           <MetricCard
